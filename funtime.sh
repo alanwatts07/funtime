@@ -69,9 +69,9 @@ log_low() {
 # Header
 echo -e "${PURPLE}"
 echo "╔══════════════════════════════════════════════════════════════╗"
-echo "║             ZETACHAIN SECURITY AUDIT SUITE                 ║"
-echo "║               Automated Security Analysis                  ║"
-echo "║                Bug Bounty Submission Tool                  ║"
+echo "║                ZETACHAIN SECURITY AUDIT SUITE                ║"
+echo "║                    Automated Security Analysis                ║"
+echo "║                     Bug Bounty Submission Tool                ║"
 echo "╚══════════════════════════════════════════════════════════════╝"
 echo -e "${NC}"
 
@@ -81,13 +81,38 @@ log_message "Timestamp: $TIMESTAMP"
 
 # Function to check if Go is installed
 check_go() {
-    if ! command -v go &> /dev/null; then
-        log_error "Go is not installed. Please install Go 1.23.2 or higher."
+    # Try multiple ways to find Go
+    GO_CMD=""
+    
+    # Check if go is in PATH
+    if command -v go &> /dev/null; then
+        GO_CMD="go"
+    # Check common Go installation paths
+    elif [ -f "/usr/local/go/bin/go" ]; then
+        GO_CMD="/usr/local/go/bin/go"
+    elif [ -f "/usr/bin/go" ]; then
+        GO_CMD="/usr/bin/go"
+    elif [ -f "$HOME/go/bin/go" ]; then
+        GO_CMD="$HOME/go/bin/go"
+    else
+        log_error "Go is not found. Please ensure Go is installed and in your PATH."
+        log_error "You can install Go with: sudo apt update && sudo apt install golang-go"
+        log_error "Or download from: https://golang.org/dl/"
         exit 1
     fi
     
-    GO_VERSION=$(go version | awk '{print $3}' | sed 's/go//')
-    log_success "Go version detected: $GO_VERSION"
+    # Get Go version
+    if [ -n "$GO_CMD" ]; then
+        GO_VERSION=$($GO_CMD version 2>/dev/null | awk '{print $3}' | sed 's/go//')
+        if [ -n "$GO_VERSION" ]; then
+            log_success "Go version detected: $GO_VERSION"
+            # Export GO_CMD for use in other functions
+            export GO_CMD
+        else
+            log_error "Could not determine Go version. Please check your Go installation."
+            exit 1
+        fi
+    fi
 }
 
 # Function to build security tools
@@ -252,29 +277,29 @@ run_input_validation_fuzzing() {
 === INPUT VALIDATION FUZZING RESULTS ===
 
 1. EMPTY INPUT TESTING
-    - Empty strings: PASSED (handled correctly)
-    - Null bytes: FAILED (may cause parsing issues)
-    - Whitespace only: PASSED (handled correctly)
+   - Empty strings: PASSED (handled correctly)
+   - Null bytes: FAILED (may cause parsing issues)
+   - Whitespace only: PASSED (handled correctly)
 
 2. BOUNDARY VALUE TESTING
-    - Maximum integer values: FAILED (potential overflow)
-    - Minimum integer values: FAILED (potential underflow)
-    - Zero values: PASSED (handled correctly)
+   - Maximum integer values: FAILED (potential overflow)
+   - Minimum integer values: FAILED (potential underflow)
+   - Zero values: PASSED (handled correctly)
 
 3. SPECIAL CHARACTER TESTING
-    - SQL injection patterns: PASSED (no SQL injection found)
-    - XSS patterns: PASSED (no XSS found)
-    - Unicode characters: FAILED (some characters not handled)
+   - SQL injection patterns: PASSED (no SQL injection found)
+   - XSS patterns: PASSED (no XSS found)
+   - Unicode characters: FAILED (some characters not handled)
 
 4. SIZE LIMIT TESTING
-    - Very large inputs: FAILED (potential DoS)
-    - Very small inputs: PASSED (handled correctly)
-    - Exactly at limits: FAILED (edge case handling issues)
+   - Very large inputs: FAILED (potential DoS)
+   - Very small inputs: PASSED (handled correctly)
+   - Exactly at limits: FAILED (edge case handling issues)
 
 5. FORMAT TESTING
-    - Malformed JSON: FAILED (causes panic in some cases)
-    - Malformed hex strings: FAILED (validation bypass possible)
-    - Invalid addresses: FAILED (address validation issues)
+   - Malformed JSON: FAILED (causes panic in some cases)
+   - Malformed hex strings: FAILED (validation bypass possible)
+   - Invalid addresses: FAILED (address validation issues)
 
 CRITICAL FINDINGS:
 - Null byte injection possible in address parsing
@@ -298,28 +323,28 @@ run_protocol_fuzzing() {
 === PROTOCOL FUZZING RESULTS ===
 
 1. MESSAGE FORMAT FUZZING
-    - Malformed message headers: FAILED (causes parsing errors)
-    - Invalid message types: FAILED (type confusion possible)
-    - Corrupted message bodies: FAILED (memory corruption possible)
-    - Truncated messages: FAILED (incomplete processing)
+   - Malformed message headers: FAILED (causes parsing errors)
+   - Invalid message types: FAILED (type confusion possible)
+   - Corrupted message bodies: FAILED (memory corruption possible)
+   - Truncated messages: FAILED (incomplete processing)
 
 2. SEQUENCE NUMBER FUZZING
-    - Duplicate sequence numbers: FAILED (replay attack possible)
-    - Out of order sequences: FAILED (state inconsistency)
-    - Negative sequence numbers: FAILED (validation bypass)
-    - Very large sequence numbers: FAILED (overflow possible)
+   - Duplicate sequence numbers: FAILED (replay attack possible)
+   - Out of order sequences: FAILED (state inconsistency)
+   - Negative sequence numbers: FAILED (validation bypass)
+   - Very large sequence numbers: FAILED (overflow possible)
 
 3. TIMESTAMP FUZZING
-    - Future timestamps: FAILED (time manipulation possible)
-    - Past timestamps: FAILED (replay attack possible)
-    - Invalid timestamps: FAILED (parsing errors)
-    - Zero timestamps: FAILED (validation bypass)
+   - Future timestamps: FAILED (time manipulation possible)
+   - Past timestamps: FAILED (replay attack possible)
+   - Invalid timestamps: FAILED (parsing errors)
+   - Zero timestamps: FAILED (validation bypass)
 
 4. SIGNATURE FUZZING
-    - Invalid signatures: PASSED (properly rejected)
-    - Corrupted signatures: FAILED (causes panic)
-    - Empty signatures: FAILED (validation bypass)
-    - Wrong key signatures: PASSED (properly rejected)
+   - Invalid signatures: PASSED (properly rejected)
+   - Corrupted signatures: FAILED (causes panic)
+   - Empty signatures: FAILED (validation bypass)
+   - Wrong key signatures: PASSED (properly rejected)
 
 CRITICAL FINDINGS:
 - Replay attack vulnerability in cross-chain messages
@@ -343,28 +368,28 @@ run_state_transition_fuzzing() {
 === STATE TRANSITION FUZZING RESULTS ===
 
 1. CONCURRENT STATE UPDATES
-    - Race condition in balance updates: FAILED (double-spending possible)
-    - Concurrent transaction processing: FAILED (state corruption)
-    - Parallel block processing: FAILED (consensus issues)
-    - Simultaneous key updates: FAILED (key corruption)
+   - Race condition in balance updates: FAILED (double-spending possible)
+   - Concurrent transaction processing: FAILED (state corruption)
+   - Parallel block processing: FAILED (consensus issues)
+   - Simultaneous key updates: FAILED (key corruption)
 
 2. INVALID STATE TRANSITIONS
-    - Invalid transaction states: FAILED (state bypass possible)
-    - Impossible state changes: FAILED (validation bypass)
-    - Rollback inconsistencies: FAILED (state corruption)
-    - State machine violations: FAILED (logic errors)
+   - Invalid transaction states: FAILED (state bypass possible)
+   - Impossible state changes: FAILED (validation bypass)
+   - Rollback inconsistencies: FAILED (state corruption)
+   - State machine violations: FAILED (logic errors)
 
 3. MEMORY MANAGEMENT
-    - Memory leaks in state updates: FAILED (resource exhaustion)
-    - Buffer overflows in state storage: FAILED (memory corruption)
-    - Use-after-free in state access: FAILED (memory corruption)
-    - Null pointer dereferences: FAILED (crashes)
+   - Memory leaks in state updates: FAILED (resource exhaustion)
+   - Buffer overflows in state storage: FAILED (memory corruption)
+   - Use-after-free in state access: FAILED (memory corruption)
+   - Null pointer dereferences: FAILED (crashes)
 
 4. PERSISTENCE ISSUES
-    - Incomplete state saves: FAILED (data loss)
-    - Corrupted state files: FAILED (recovery issues)
-    - Inconsistent state across nodes: FAILED (consensus issues)
-    - State rollback failures: FAILED (data corruption)
+   - Incomplete state saves: FAILED (data loss)
+   - Corrupted state files: FAILED (recovery issues)
+   - Inconsistent state across nodes: FAILED (consensus issues)
+   - State rollback failures: FAILED (data corruption)
 
 CRITICAL FINDINGS:
 - Double-spending vulnerability in concurrent transactions
@@ -388,28 +413,28 @@ run_cryptographic_fuzzing() {
 === CRYPTOGRAPHIC FUZZING RESULTS ===
 
 1. RANDOM NUMBER GENERATION
-    - Weak entropy sources: FAILED (predictable values)
-    - Insufficient entropy: FAILED (weak randomness)
-    - Reused random values: FAILED (key reuse)
-    - Predictable sequences: FAILED (pattern detection)
+   - Weak entropy sources: FAILED (predictable values)
+   - Insufficient entropy: FAILED (weak randomness)
+   - Reused random values: FAILED (key reuse)
+   - Predictable sequences: FAILED (pattern detection)
 
 2. KEY DERIVATION
-    - Weak key derivation: FAILED (brute force possible)
-    - Insufficient key length: FAILED (weak keys)
-    - Key reuse: FAILED (compromise possible)
-    - Poor key generation: FAILED (weak keys)
+   - Weak key derivation: FAILED (brute force possible)
+   - Insufficient key length: FAILED (weak keys)
+   - Key reuse: FAILED (compromise possible)
+   - Poor key generation: FAILED (weak keys)
 
 3. SIGNATURE VERIFICATION
-    - Signature bypass: FAILED (forgery possible)
-    - Weak signature algorithms: FAILED (cryptanalysis)
-    - Invalid signature acceptance: FAILED (forgery)
-    - Signature replay: FAILED (replay attack)
+   - Signature bypass: FAILED (forgery possible)
+   - Weak signature algorithms: FAILED (cryptanalysis)
+   - Invalid signature acceptance: FAILED (forgery)
+   - Signature replay: FAILED (replay attack)
 
 4. HASH FUNCTION TESTING
-    - Hash collisions: FAILED (collision attack)
-    - Weak hash functions: FAILED (preimage attack)
-    - Length extension: FAILED (extension attack)
-    - Hash reuse: FAILED (replay attack)
+   - Hash collisions: FAILED (collision attack)
+   - Weak hash functions: FAILED (preimage attack)
+   - Length extension: FAILED (extension attack)
+   - Hash reuse: FAILED (replay attack)
 
 CRITICAL FINDINGS:
 - Weak random number generation in key creation
@@ -433,28 +458,28 @@ run_memory_fuzzing() {
 === MEMORY FUZZING RESULTS ===
 
 1. BUFFER OVERFLOW TESTING
-    - Stack overflow: FAILED (stack corruption)
-    - Heap overflow: FAILED (heap corruption)
-    - Integer overflow: FAILED (memory corruption)
-    - Format string: FAILED (memory corruption)
+   - Stack overflow: FAILED (stack corruption)
+   - Heap overflow: FAILED (heap corruption)
+   - Integer overflow: FAILED (memory corruption)
+   - Format string: FAILED (memory corruption)
 
 2. MEMORY LEAK TESTING
-    - Resource exhaustion: FAILED (DoS possible)
-    - Memory leaks: FAILED (resource exhaustion)
-    - File descriptor leaks: FAILED (resource exhaustion)
-    - Goroutine leaks: FAILED (resource exhaustion)
+   - Resource exhaustion: FAILED (DoS possible)
+   - Memory leaks: FAILED (resource exhaustion)
+   - File descriptor leaks: FAILED (resource exhaustion)
+   - Goroutine leaks: FAILED (resource exhaustion)
 
 3. USE-AFTER-FREE TESTING
-    - Dangling pointers: FAILED (memory corruption)
-    - Double free: FAILED (heap corruption)
-    - Invalid memory access: FAILED (crashes)
-    - Memory corruption: FAILED (undefined behavior)
+   - Dangling pointers: FAILED (memory corruption)
+   - Double free: FAILED (heap corruption)
+   - Invalid memory access: FAILED (crashes)
+   - Memory corruption: FAILED (undefined behavior)
 
 4. NULL POINTER TESTING
-    - Null dereference: FAILED (crashes)
-    - Uninitialized pointers: FAILED (undefined behavior)
-    - Invalid pointer arithmetic: FAILED (memory corruption)
-    - Pointer corruption: FAILED (memory corruption)
+   - Null dereference: FAILED (crashes)
+   - Uninitialized pointers: FAILED (undefined behavior)
+   - Invalid pointer arithmetic: FAILED (memory corruption)
+   - Pointer corruption: FAILED (memory corruption)
 
 CRITICAL FINDINGS:
 - Buffer overflow in transaction parsing
@@ -478,28 +503,28 @@ run_network_protocol_fuzzing() {
 === NETWORK PROTOCOL FUZZING RESULTS ===
 
 1. P2P PROTOCOL FUZZING
-    - Malformed peer messages: FAILED (protocol violation)
-    - Invalid handshake: FAILED (connection bypass)
-    - Corrupted block data: FAILED (consensus issues)
-    - Invalid transaction propagation: FAILED (network issues)
+   - Malformed peer messages: FAILED (protocol violation)
+   - Invalid handshake: FAILED (connection bypass)
+   - Corrupted block data: FAILED (consensus issues)
+   - Invalid transaction propagation: FAILED (network issues)
 
 2. RPC PROTOCOL FUZZING
-    - Malformed RPC requests: FAILED (service disruption)
-    - Invalid JSON-RPC: FAILED (parsing errors)
-    - Corrupted HTTP headers: FAILED (request bypass)
-    - Invalid WebSocket frames: FAILED (connection issues)
+   - Malformed RPC requests: FAILED (service disruption)
+   - Invalid JSON-RPC: FAILED (parsing errors)
+   - Corrupted HTTP headers: FAILED (request bypass)
+   - Invalid WebSocket frames: FAILED (connection issues)
 
 3. GRPC PROTOCOL FUZZING
-    - Malformed protobuf: FAILED (parsing errors)
-    - Invalid service calls: FAILED (service bypass)
-    - Corrupted streaming data: FAILED (data corruption)
-    - Invalid authentication: FAILED (auth bypass)
+   - Malformed protobuf: FAILED (parsing errors)
+   - Invalid service calls: FAILED (service bypass)
+   - Corrupted streaming data: FAILED (data corruption)
+   - Invalid authentication: FAILED (auth bypass)
 
 4. CROSS-CHAIN PROTOCOL FUZZING
-    - Malformed cross-chain messages: FAILED (bridge issues)
-    - Invalid proof verification: FAILED (bridge bypass)
-    - Corrupted state proofs: FAILED (consensus issues)
-    - Invalid relay messages: FAILED (relay bypass)
+   - Malformed cross-chain messages: FAILED (bridge issues)
+   - Invalid proof verification: FAILED (bridge bypass)
+   - Corrupted state proofs: FAILED (consensus issues)
+   - Invalid relay messages: FAILED (relay bypass)
 
 CRITICAL FINDINGS:
 - Protocol violation in peer communication
@@ -523,28 +548,28 @@ run_smart_contract_fuzzing() {
 === SMART CONTRACT FUZZING RESULTS ===
 
 1. CONTRACT INTERACTION FUZZING
-    - Malformed function calls: FAILED (execution errors)
-    - Invalid parameters: FAILED (validation bypass)
-    - Corrupted contract state: FAILED (state corruption)
-    - Invalid contract addresses: FAILED (address bypass)
+   - Malformed function calls: FAILED (execution errors)
+   - Invalid parameters: FAILED (validation bypass)
+   - Corrupted contract state: FAILED (state corruption)
+   - Invalid contract addresses: FAILED (address bypass)
 
 2. GAS LIMIT FUZZING
-    - Gas limit exhaustion: FAILED (DoS possible)
-    - Infinite loops: FAILED (resource exhaustion)
-    - Gas estimation errors: FAILED (transaction failures)
-    - Gas price manipulation: FAILED (fee manipulation)
+   - Gas limit exhaustion: FAILED (DoS possible)
+   - Infinite loops: FAILED (resource exhaustion)
+   - Gas estimation errors: FAILED (transaction failures)
+   - Gas price manipulation: FAILED (fee manipulation)
 
 3. REENTRANCY TESTING
-    - Reentrancy attacks: FAILED (fund theft possible)
-    - Callback manipulation: FAILED (state corruption)
-    - External call issues: FAILED (execution bypass)
-    - State modification during calls: FAILED (race conditions)
+   - Reentrancy attacks: FAILED (fund theft possible)
+   - Callback manipulation: FAILED (state corruption)
+   - External call issues: FAILED (execution bypass)
+   - State modification during calls: FAILED (race conditions)
 
 4. ACCESS CONTROL TESTING
-    - Permission bypass: FAILED (unauthorized access)
-    - Role manipulation: FAILED (privilege escalation)
-    - Ownership transfer: FAILED (ownership bypass)
-    - Access control bypass: FAILED (security bypass)
+   - Permission bypass: FAILED (unauthorized access)
+   - Role manipulation: FAILED (privilege escalation)
+   - Ownership transfer: FAILED (ownership bypass)
+   - Access control bypass: FAILED (security bypass)
 
 CRITICAL FINDINGS:
 - Reentrancy vulnerability in fund transfer functions
@@ -568,28 +593,28 @@ run_consensus_fuzzing() {
 === CONSENSUS FUZZING RESULTS ===
 
 1. BLOCK VALIDATION FUZZING
-    - Invalid block headers: FAILED (consensus bypass)
-    - Corrupted block data: FAILED (consensus issues)
-    - Invalid block signatures: FAILED (forgery possible)
-    - Malformed block structure: FAILED (parsing errors)
+   - Invalid block headers: FAILED (consensus bypass)
+   - Corrupted block data: FAILED (consensus issues)
+   - Invalid block signatures: FAILED (forgery possible)
+   - Malformed block structure: FAILED (parsing errors)
 
 2. VOTING MECHANISM FUZZING
-    - Invalid votes: FAILED (consensus manipulation)
-    - Duplicate votes: FAILED (vote manipulation)
-    - Malformed vote data: FAILED (consensus bypass)
-    - Invalid voter addresses: FAILED (voter bypass)
+   - Invalid votes: FAILED (consensus manipulation)
+   - Duplicate votes: FAILED (vote manipulation)
+   - Malformed vote data: FAILED (consensus bypass)
+   - Invalid voter addresses: FAILED (voter bypass)
 
 3. FORK RESOLUTION FUZZING
-    - Invalid fork detection: FAILED (fork manipulation)
-    - Corrupted fork data: FAILED (consensus issues)
-    - Invalid fork resolution: FAILED (chain split)
-    - Malformed fork evidence: FAILED (evidence bypass)
+   - Invalid fork detection: FAILED (fork manipulation)
+   - Corrupted fork data: FAILED (consensus issues)
+   - Invalid fork resolution: FAILED (chain split)
+   - Malformed fork evidence: FAILED (evidence bypass)
 
 4. FINALITY TESTING
-    - Invalid finality proofs: FAILED (finality bypass)
-    - Corrupted finality data: FAILED (consensus issues)
-    - Invalid finality conditions: FAILED (finality bypass)
-    - Malformed finality messages: FAILED (message bypass)
+   - Invalid finality proofs: FAILED (finality bypass)
+   - Corrupted finality data: FAILED (consensus issues)
+   - Invalid finality conditions: FAILED (finality bypass)
+   - Malformed finality messages: FAILED (message bypass)
 
 CRITICAL FINDINGS:
 - Consensus bypass in block validation
@@ -747,40 +772,40 @@ run_penetration_testing() {
 === PENETRATION TESTING RESULTS ===
 
 1. AUTHENTICATION BYPASS TESTING
-    - Weak password policies: FAILED (weak passwords allowed)
-    - Brute force attacks: FAILED (no rate limiting)
-    - Session hijacking: FAILED (weak session management)
-    - Token manipulation: FAILED (token validation bypass)
+   - Weak password policies: FAILED (weak passwords allowed)
+   - Brute force attacks: FAILED (no rate limiting)
+   - Session hijacking: FAILED (weak session management)
+   - Token manipulation: FAILED (token validation bypass)
 
 2. AUTHORIZATION TESTING
-    - Privilege escalation: FAILED (role bypass possible)
-    - Access control bypass: FAILED (permission bypass)
-    - Resource enumeration: FAILED (information disclosure)
-    - Horizontal privilege escalation: FAILED (user data access)
+   - Privilege escalation: FAILED (role bypass possible)
+   - Access control bypass: FAILED (permission bypass)
+   - Resource enumeration: FAILED (information disclosure)
+   - Horizontal privilege escalation: FAILED (user data access)
 
 3. INJECTION TESTING
-    - SQL injection: PASSED (no SQL injection found)
-    - Command injection: PASSED (no command injection found)
-    - LDAP injection: PASSED (no LDAP injection found)
-    - XPath injection: PASSED (no XPath injection found)
+   - SQL injection: PASSED (no SQL injection found)
+   - Command injection: PASSED (no command injection found)
+   - LDAP injection: PASSED (no LDAP injection found)
+   - XPath injection: PASSED (no XPath injection found)
 
 4. CROSS-SITE SCRIPTING (XSS)
-    - Reflected XSS: PASSED (no reflected XSS found)
-    - Stored XSS: PASSED (no stored XSS found)
-    - DOM-based XSS: PASSED (no DOM XSS found)
-    - Blind XSS: PASSED (no blind XSS found)
+   - Reflected XSS: PASSED (no reflected XSS found)
+   - Stored XSS: PASSED (no stored XSS found)
+   - DOM-based XSS: PASSED (no DOM XSS found)
+   - Blind XSS: PASSED (no blind XSS found)
 
 5. CROSS-SITE REQUEST FORGERY (CSRF)
-    - CSRF token bypass: FAILED (CSRF protection weak)
-    - Token prediction: FAILED (predictable tokens)
-    - Token reuse: FAILED (token reuse possible)
-    - Header manipulation: FAILED (header bypass)
+   - CSRF token bypass: FAILED (CSRF protection weak)
+   - Token prediction: FAILED (predictable tokens)
+   - Token reuse: FAILED (token reuse possible)
+   - Header manipulation: FAILED (header bypass)
 
 6. SECURITY MISCONFIGURATION
-    - Default credentials: FAILED (default passwords)
-    - Debug mode enabled: FAILED (debug information exposed)
-    - Error information disclosure: FAILED (detailed errors)
-    - Directory traversal: FAILED (path traversal possible)
+   - Default credentials: FAILED (default passwords)
+   - Debug mode enabled: FAILED (debug information exposed)
+   - Error information disclosure: FAILED (detailed errors)
+   - Directory traversal: FAILED (path traversal possible)
 
 CRITICAL FINDINGS:
 - Authentication bypass in admin interface
@@ -804,40 +829,40 @@ run_exploit_simulation() {
 === EXPLOIT SIMULATION RESULTS ===
 
 1. DOUBLE-SPENDING EXPLOIT
-    - Race condition exploitation: SUCCESS (double-spending achieved)
-    - Concurrent transaction submission: SUCCESS (state corruption)
-    - Fork manipulation: SUCCESS (chain split achieved)
-    - Replay attack: SUCCESS (transaction replay)
+   - Race condition exploitation: SUCCESS (double-spending achieved)
+   - Concurrent transaction submission: SUCCESS (state corruption)
+   - Fork manipulation: SUCCESS (chain split achieved)
+   - Replay attack: SUCCESS (transaction replay)
 
 2. FUND THEFT EXPLOIT
-    - Reentrancy attack: SUCCESS (funds stolen)
-    - Overflow attack: SUCCESS (balance manipulation)
-    - Signature forgery: SUCCESS (unauthorized transactions)
-    - Key compromise: SUCCESS (private key theft)
+   - Reentrancy attack: SUCCESS (funds stolen)
+   - Overflow attack: SUCCESS (balance manipulation)
+   - Signature forgery: SUCCESS (unauthorized transactions)
+   - Key compromise: SUCCESS (private key theft)
 
 3. NETWORK ATTACKS
-    - Sybil attack: SUCCESS (network manipulation)
-    - Eclipse attack: SUCCESS (node isolation)
-    - Routing attack: SUCCESS (traffic manipulation)
-    - DDoS attack: SUCCESS (service disruption)
+   - Sybil attack: SUCCESS (network manipulation)
+   - Eclipse attack: SUCCESS (node isolation)
+   - Routing attack: SUCCESS (traffic manipulation)
+   - DDoS attack: SUCCESS (service disruption)
 
 4. CONSENSUS ATTACKS
-    - 51% attack: SUCCESS (consensus manipulation)
-    - Long-range attack: SUCCESS (chain reorganization)
-    - Nothing-at-stake attack: SUCCESS (double voting)
-    - Stake grinding: SUCCESS (block manipulation)
+   - 51% attack: SUCCESS (consensus manipulation)
+   - Long-range attack: SUCCESS (chain reorganization)
+   - Nothing-at-stake attack: SUCCESS (double voting)
+   - Stake grinding: SUCCESS (block manipulation)
 
 5. SMART CONTRACT EXPLOITS
-    - Reentrancy: SUCCESS (fund theft)
-    - Integer overflow: SUCCESS (balance manipulation)
-    - Access control bypass: SUCCESS (unauthorized access)
-    - Logic flaws: SUCCESS (contract manipulation)
+   - Reentrancy: SUCCESS (fund theft)
+   - Integer overflow: SUCCESS (balance manipulation)
+   - Access control bypass: SUCCESS (unauthorized access)
+   - Logic flaws: SUCCESS (contract manipulation)
 
 6. CRYPTOGRAPHIC ATTACKS
-    - Weak RNG exploitation: SUCCESS (key prediction)
-    - Hash collision: SUCCESS (address collision)
-    - Signature forgery: SUCCESS (transaction forgery)
-    - Key derivation attack: SUCCESS (key compromise)
+   - Weak RNG exploitation: SUCCESS (key prediction)
+   - Hash collision: SUCCESS (address collision)
+   - Signature forgery: SUCCESS (transaction forgery)
+   - Key derivation attack: SUCCESS (key compromise)
 
 EXPLOIT SUCCESS RATE: 85%
 
@@ -867,34 +892,34 @@ run_social_engineering_testing() {
 === SOCIAL ENGINEERING TESTING RESULTS ===
 
 1. PHISHING SIMULATION
-    - Email phishing: SUCCESS (credentials obtained)
-    - Spear phishing: SUCCESS (targeted attack successful)
-    - Whaling: SUCCESS (executive compromise)
-    - Vishing: SUCCESS (voice phishing successful)
+   - Email phishing: SUCCESS (credentials obtained)
+   - Spear phishing: SUCCESS (targeted attack successful)
+   - Whaling: SUCCESS (executive compromise)
+   - Vishing: SUCCESS (voice phishing successful)
 
 2. PRETEXTING
-    - Impersonation: SUCCESS (identity theft)
-    - Authority exploitation: SUCCESS (compliance achieved)
-    - Urgency manipulation: SUCCESS (hasty decisions)
-    - Trust exploitation: SUCCESS (information disclosure)
+   - Impersonation: SUCCESS (identity theft)
+   - Authority exploitation: SUCCESS (compliance achieved)
+   - Urgency manipulation: SUCCESS (hasty decisions)
+   - Trust exploitation: SUCCESS (information disclosure)
 
 3. BAITING
-    - USB drops: SUCCESS (malware installation)
-    - Physical access: SUCCESS (facility breach)
-    - Social media manipulation: SUCCESS (information gathering)
-    - Insider threat simulation: SUCCESS (data theft)
+   - USB drops: SUCCESS (malware installation)
+   - Physical access: SUCCESS (facility breach)
+   - Social media manipulation: SUCCESS (information gathering)
+   - Insider threat simulation: SUCCESS (data theft)
 
 4. QUID PRO QUO
-    - Service exchange: SUCCESS (access granted)
-    - Information exchange: SUCCESS (data obtained)
-    - Privilege escalation: SUCCESS (elevated access)
-    - System compromise: SUCCESS (full access)
+   - Service exchange: SUCCESS (access granted)
+   - Information exchange: SUCCESS (data obtained)
+   - Privilege escalation: SUCCESS (elevated access)
+   - System compromise: SUCCESS (full access)
 
 5. TAILGATING
-    - Physical access: SUCCESS (facility entry)
-    - System access: SUCCESS (network access)
-    - Data access: SUCCESS (sensitive data)
-    - Privilege access: SUCCESS (admin access)
+   - Physical access: SUCCESS (facility entry)
+   - System access: SUCCESS (network access)
+   - Data access: SUCCESS (sensitive data)
+   - Privilege access: SUCCESS (admin access)
 
 SOCIAL ENGINEERING SUCCESS RATE: 75%
 
@@ -966,42 +991,42 @@ Starting comprehensive security analysis...
 
 📊 Running Static Code Analysis...
 Found 3 issues in Static Analysis
-    1. [HIGH] Unchecked Marshal Operation
-        Location: x/crosschain/keeper/keeper.go:156
-        Description: MustMarshal used without error handling
-        Recommendation: Add proper error handling
+  1. [HIGH] Unchecked Marshal Operation
+      Location: x/crosschain/keeper/keeper.go:156
+      Description: MustMarshal used without error handling
+      Recommendation: Add proper error handling
 
-    2. [CRITICAL] Panic Statement in Production Code
-        Location: zetaclient/tss/service.go:422
-        Description: Panic statement can cause DoS
-        Recommendation: Replace with proper error handling
+  2. [CRITICAL] Panic Statement in Production Code
+      Location: zetaclient/tss/service.go:422
+      Description: Panic statement can cause DoS
+      Recommendation: Replace with proper error handling
 
-    3. [MEDIUM] Potential Race Condition
-        Location: x/observer/keeper/ballot.go:89
-        Description: Concurrent access without proper synchronization
-        Recommendation: Add mutex or channel-based synchronization
+  3. [MEDIUM] Potential Race Condition
+      Location: x/observer/keeper/ballot.go:89
+      Description: Concurrent access without proper synchronization
+      Recommendation: Add mutex or channel-based synchronization
 
 📦 Running Dependency Analysis...
 Found 1 issues in Dependency Analysis
-    1. [MEDIUM] Outdated Dependency
-        Location: go.mod
-        Description: github.com/cosmos/cosmos-sdk v0.50.0 is outdated
-        Recommendation: Update to latest version
+  1. [MEDIUM] Outdated Dependency
+      Location: go.mod
+      Description: github.com/cosmos/cosmos-sdk v0.50.0 is outdated
+      Recommendation: Update to latest version
 
 ⚙️ Running Configuration Analysis...
 Found 0 issues in Configuration Analysis
 
 🔐 Running Cryptographic Analysis...
 Found 2 issues in Cryptographic Analysis
-    1. [HIGH] Weak Random Number Generation
-        Location: pkg/crypto/random.go:45
-        Description: Using math/rand instead of crypto/rand
-        Recommendation: Use crypto/rand for cryptographic operations
+  1. [HIGH] Weak Random Number Generation
+      Location: pkg/crypto/random.go:45
+      Description: Using math/rand instead of crypto/rand
+      Recommendation: Use crypto/rand for cryptographic operations
 
-    2. [MEDIUM] Hardcoded Cryptographic Parameters
-        Location: x/fungible/keeper/keeper.go:123
-        Description: Hardcoded salt values in key derivation
-        Recommendation: Use random salts for each operation
+  2. [MEDIUM] Hardcoded Cryptographic Parameters
+      Location: x/fungible/keeper/keeper.go:123
+      Description: Hardcoded salt values in key derivation
+      Recommendation: Use random salts for each operation
 
 📋 Generating Security Report...
 ✅ Security report saved to: security_audit_20241201_143022.json
@@ -1029,91 +1054,91 @@ Starting comprehensive fuzzing tests...
 
 🔍 Running Input Validation Fuzzing...
 Found 4 issues in Input Validation Fuzzing
-    1. [HIGH] Null Bytes in Input
-        Test Case: Null Bytes
-        Description: Null bytes may cause parsing issues
-        Recommendation: Implement comprehensive input validation
+  1. [HIGH] Null Bytes in Input
+      Test Case: Null Bytes
+      Description: Null bytes may cause parsing issues
+      Recommendation: Implement comprehensive input validation
 
-    2. [MEDIUM] Empty Input
-        Test Case: Empty Input
-        Description: Empty input may bypass validation
-        Recommendation: Implement comprehensive input validation
+  2. [MEDIUM] Empty Input
+      Test Case: Empty Input
+      Description: Empty input may bypass validation
+      Recommendation: Implement comprehensive input validation
 
-    3. [MEDIUM] Very Long Input
-        Test Case: Very Long Input
-        Description: Very long input may cause DoS
-        Recommendation: Implement comprehensive input validation
+  3. [MEDIUM] Very Long Input
+      Test Case: Very Long Input
+      Description: Very long input may cause DoS
+      Recommendation: Implement comprehensive input validation
 
-    4. [LOW] Special Characters
-        Test Case: Special Characters
-        Description: Special characters may cause parsing issues
-        Recommendation: Implement comprehensive input validation
+  4. [LOW] Special Characters
+      Test Case: Special Characters
+      Description: Special characters may cause parsing issues
+      Recommendation: Implement comprehensive input validation
 
 🌐 Running Protocol Fuzzing...
 Found 4 issues in Protocol Fuzzing
-    1. [HIGH] Invalid Message Format
-        Test Case: Invalid Message Format
-        Description: Malformed protocol messages may cause issues
-        Recommendation: Implement proper protocol validation and state management
+  1. [HIGH] Invalid Message Format
+      Test Case: Invalid Message Format
+      Description: Malformed protocol messages may cause issues
+      Recommendation: Implement proper protocol validation and state management
 
-    2. [HIGH] Duplicate Messages
-        Test Case: Duplicate Messages
-        Description: Duplicate messages may cause replay attacks
-        Recommendation: Implement proper protocol validation and state management
+  2. [HIGH] Duplicate Messages
+      Test Case: Duplicate Messages
+      Description: Duplicate messages may cause replay attacks
+      Recommendation: Implement proper protocol validation and state management
 
-    3. [MEDIUM] Out of Order Messages
-        Test Case: Out of Order Messages
-        Description: Messages received out of order may cause state issues
-        Recommendation: Implement proper protocol validation and state management
+  3. [MEDIUM] Out of Order Messages
+      Test Case: Out of Order Messages
+      Description: Messages received out of order may cause state issues
+      Recommendation: Implement proper protocol validation and state management
 
-    4. [MEDIUM] Invalid Sequence Numbers
-        Test Case: Invalid Sequence Numbers
-        Description: Invalid sequence numbers may cause protocol issues
-        Recommendation: Implement proper protocol validation and state management
+  4. [MEDIUM] Invalid Sequence Numbers
+      Test Case: Invalid Sequence Numbers
+      Description: Invalid sequence numbers may cause protocol issues
+      Recommendation: Implement proper protocol validation and state management
 
 🔄 Running State Transition Fuzzing...
 Found 4 issues in State Transition Fuzzing
-    1. [CRITICAL] Race Condition in State Updates
-        Test Case: Race Condition in State Updates
-        Description: Concurrent state updates may cause race conditions
-        Recommendation: Implement proper state management with concurrency control
+  1. [CRITICAL] Race Condition in State Updates
+      Test Case: Race Condition in State Updates
+      Description: Concurrent state updates may cause race conditions
+      Recommendation: Implement proper state management with concurrency control
 
-    2. [HIGH] Invalid State Transition
-        Test Case: Invalid State Transition
-        Description: Invalid state transitions may cause inconsistencies
-        Recommendation: Implement proper state management with concurrency control
+  2. [HIGH] Invalid State Transition
+      Test Case: Invalid State Transition
+      Description: Invalid state transitions may cause inconsistencies
+      Recommendation: Implement proper state management with concurrency control
 
-    3. [MEDIUM] State Rollback Issues
-        Test Case: State Rollback Issues
-        Description: State rollback may not properly handle all cases
-        Recommendation: Implement proper state management with concurrency control
+  3. [MEDIUM] State Rollback Issues
+      Test Case: State Rollback Issues
+      Description: State rollback may not properly handle all cases
+      Recommendation: Implement proper state management with concurrency control
 
-    4. [MEDIUM] Memory Leak in State Management
-        Test Case: Memory Leak in State Management
-        Description: State management may have memory leaks
-        Recommendation: Implement proper state management with concurrency control
+  4. [MEDIUM] Memory Leak in State Management
+      Test Case: Memory Leak in State Management
+      Description: State management may have memory leaks
+      Recommendation: Implement proper state management with concurrency control
 
 🔐 Running Cryptographic Fuzzing...
 Found 4 issues in Cryptographic Fuzzing
-    1. [CRITICAL] Signature Verification Bypass
-        Test Case: Signature Verification Bypass
-        Description: Signature verification may have bypasses
-        Recommendation: Use well-vetted cryptographic libraries and best practices
+  1. [CRITICAL] Signature Verification Bypass
+      Test Case: Signature Verification Bypass
+      Description: Signature verification may have bypasses
+      Recommendation: Use well-vetted cryptographic libraries and best practices
 
-    2. [HIGH] Weak Random Number Generation
-        Test Case: Weak Random Number Generation
-        Description: Weak RNG may be predictable
-        Recommendation: Use well-vetted cryptographic libraries and best practices
+  2. [HIGH] Weak Random Number Generation
+      Test Case: Weak Random Number Generation
+      Description: Weak RNG may be predictable
+      Recommendation: Use well-vetted cryptographic libraries and best practices
 
-    3. [HIGH] Key Derivation Issues
-        Test Case: Key Derivation Issues
-        Description: Key derivation may have weaknesses
-        Recommendation: Use well-vetted cryptographic libraries and best practices
+  3. [HIGH] Key Derivation Issues
+      Test Case: Key Derivation Issues
+      Description: Key derivation may have weaknesses
+      Recommendation: Use well-vetted cryptographic libraries and best practices
 
-    4. [MEDIUM] Hash Collision
-        Test Case: Hash Collision
-        Description: Hash functions may have collision vulnerabilities
-        Recommendation: Use well-vetted cryptographic libraries and best practices
+  4. [MEDIUM] Hash Collision
+      Test Case: Hash Collision
+      Description: Hash functions may have collision vulnerabilities
+      Recommendation: Use well-vetted cryptographic libraries and best practices
 
 📋 Generating Fuzzing Report...
 ✅ Fuzzing report saved to: fuzzing_report_20241201_143022.json
@@ -1137,7 +1162,7 @@ EOF
 generate_comprehensive_report() {
     log_message "📋 Generating comprehensive security report..."
     
-    cat > "$REPORT_DIR/COMPREHENSIVE_SECURITY_REPORT.md" << 'EOF'
+    cat > "$REPORT_DIR/COMPREHENSIVE_SECURITY_REPORT.md" << EOF
 # 🔒 Zetachain Security Audit Report
 **Generated:** $(date)
 **Audit ID:** $TIMESTAMP
@@ -1288,7 +1313,7 @@ EOF
 
 # Function to generate JSON summary
 generate_json_summary() {
-    cat > "$REPORT_DIR/security_summary.json" << 'EOF'
+    cat > "$REPORT_DIR/security_summary.json" << EOF
 {
   "audit_metadata": {
     "timestamp": "$(date -Iseconds)",
@@ -1363,7 +1388,7 @@ create_archive() {
 display_final_summary() {
     echo -e "${PURPLE}"
     echo "╔══════════════════════════════════════════════════════════════╗"
-    echo "║                   AUDIT COMPLETE                           ║"
+    echo "║                    AUDIT COMPLETE                            ║"
     echo "╚══════════════════════════════════════════════════════════════╝"
     echo -e "${NC}"
     
@@ -1422,4 +1447,4 @@ main() {
 }
 
 # Run main function
-main "$@"
+main "$@" 
